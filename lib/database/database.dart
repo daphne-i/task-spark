@@ -46,6 +46,8 @@ class AppDatabase extends _$AppDatabase {
   Future<int> addTask(TasksCompanion entry) {
     return into(tasks).insert(entry);
   }
+
+  Future<List<Category>> getAllCategories() => select(categories).get();
 }
 
 LazyDatabase _openConnection() {

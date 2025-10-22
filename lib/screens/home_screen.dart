@@ -111,20 +111,39 @@ class HomeScreen extends StatelessWidget {
           );
         },
         // Apply the glossy gradient
-        child: Ink(
+        elevation: 0, // 1. Remove the default shadow
+        backgroundColor:
+            Colors.transparent, // 2. Make the FAB itself transparent
+        child: Container(
+          // 3. Use a Container for our custom button
+          width: 60, // 4. Set a fixed size
+          height: 60,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            shape: BoxShape.circle, // 5. Make it perfectly round
+            gradient: const LinearGradient(
+              // 6. Use the "glossy" blue/purple gradient
               colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.secondary,
+                Color(0xFF4A90E2), // Bright Blue
+                Color(0xFF9013FE), // Purple
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            shape: BoxShape.circle,
+            boxShadow: [
+              // 7. Add our own soft shadow for the "lifted" look
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          child: const Center(
-            child: Icon(Icons.add, color: Colors.white, size: 30),
+          child: const Icon(
+            // 8. Put the icon inside our custom container
+            Icons.add,
+            color: Colors.white,
+            size: 30,
           ),
         ),
       ),

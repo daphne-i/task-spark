@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:task_sparkle/database/database.dart'; // <-- Add this line
 
 // The base class for all our events
 abstract class TasksEvent extends Equatable {
@@ -13,7 +14,15 @@ class LoadTasks extends TasksEvent {}
 
 // Event: "Add a new task"
 // (We'll add more details to this later)
-class AddTask extends TasksEvent {}
+class AddTask extends TasksEvent {
+  // A TasksCompanion is the drift-generated object for inserting a new row
+  final TasksCompanion task;
+
+  const AddTask({required this.task});
+
+  @override
+  List<Object> get props => [task];
+}
 
 // Event: "Mark a task as complete/incomplete"
 class ToggleTaskCompletion extends TasksEvent {

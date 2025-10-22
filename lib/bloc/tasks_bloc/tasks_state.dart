@@ -15,12 +15,13 @@ class TasksLoading extends TasksState {}
 // State: "We have successfully loaded the tasks"
 class TasksLoaded extends TasksState {
   final List<Task> tasks;
+  final List<Category> categories;
   // We can add categories, stats, etc., here later
 
-  const TasksLoaded({this.tasks = const []});
+  const TasksLoaded({this.tasks = const [], this.categories = const []});
 
   @override
-  List<Object> get props => [tasks];
+  List<Object> get props => [tasks, categories];
 }
 
 // State: "Something went wrong"
