@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:task_sparkle/database/database.dart'; // Import our Task model
 import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:task_sparkle/bloc/tasks_bloc/tasks_bloc.dart';
+import 'package:task_sparkle/bloc/tasks_bloc/tasks_event.dart';
 
 class TaskListItem extends StatelessWidget {
   final Task task;
@@ -87,7 +90,14 @@ class TaskListItem extends StatelessWidget {
               child: Checkbox(
                 value: isCompleted,
                 onChanged: (bool? newValue) {
-                  // TODO: Fire BLoC event to toggle completion
+                  if (newValue == null) return;
+                  // Fire the BLoC event
+                  context.read<TasksBloc>().add(
+                    ToggleTaskCompletion(
+                      taskId: task.id,
+                      isCompleted: newValue,
+                    ),
+                  );
                 },
                 activeColor: priorityColor,
                 // Make the checkbox round
@@ -138,7 +148,35 @@ class TaskListItem extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.more_vert),
               onPressed: () {
-                // TODO: Show edit/delete menu
+                // Show a confirmation dialog
+                showDialog(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('Delete Task?'),
+                    content: Text(
+                      'Are you sure you want to delete "${task.title}"?',
+                    ),
+                    actions: [
+                      TextButton(
+                        child: const Text('Cancel'),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                        child: const Text('Delete'),
+                        onPressed: () {
+                          // Fire the BLoC event
+                          context.read<TasksBloc>().add(
+                            DeleteTask(taskId: task.id),
+                          );
+                          Navigator.of(dialogContext).pop();
+                        },
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ],

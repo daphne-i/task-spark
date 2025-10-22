@@ -11,6 +11,8 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     // When a 'LoadTasks' event comes in, call this function
     on<LoadTasks>(_onLoadTasks);
     on<AddTask>(_onAddTask);
+    on<ToggleTaskCompletion>(_onToggleTaskCompletion);
+    on<DeleteTask>(_onDeleteTask);
   }
 
   void _onLoadTasks(LoadTasks event, Emitter<TasksState> emit) async {
@@ -45,6 +47,29 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
       // As soon as the task is added, the stream will automatically
       // fire, and _onLoadTasks will emit a new TasksLoaded state.
       // This is the power of reactive programming!
+    } catch (e) {
+      emit(TasksError(e.toString()));
+    }
+  }
+
+  // Handles toggling the completion state of a task
+  void _onToggleTaskCompletion(
+    ToggleTaskCompletion event,
+    Emitter<TasksState> emit,
+  ) async {
+    try {
+      await database.updateTaskCompletion(event.taskId, event.isCompleted);
+      // Like adding, we don't need to emit. The stream will update.
+    } catch (e) {
+      emit(TasksError(e.toString()));
+    }
+  }
+
+  // Handles deleting a task
+  void _onDeleteTask(DeleteTask event, Emitter<TasksState> emit) async {
+    try {
+      await database.deleteTaskById(event.taskId);
+      // The stream will update automatically.
     } catch (e) {
       emit(TasksError(e.toString()));
     }

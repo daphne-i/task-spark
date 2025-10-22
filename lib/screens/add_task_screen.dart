@@ -132,19 +132,38 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 const SizedBox(height: 24),
 
                 // --- Toggles ---
-                _buildToggleRow('Set Deadline', _setDeadline, (val) {
-                  setState(() {
-                    _setDeadline = val;
-                    if (_setDeadline && _selectedDate == null) {
-                      _pickDate();
-                    }
-                  });
-                }),
+                _buildToggleRow(
+                  'Set Deadline',
+                  _setDeadline,
+                  _isRecurring
+                      ? null
+                      : (val) {
+                          // If recurring is on, pass null to disable
+                          setState(() {
+                            _setDeadline = val;
+                            if (_setDeadline && _selectedDate == null) {
+                              _pickDate();
+                            }
+                          });
+                        },
+                ),
                 _buildToggleRow('Set Reminder', _setReminder, (val) {
                   setState(() => _setReminder = val);
                 }),
                 _buildToggleRow('Make Recurring', _isRecurring, (val) {
-                  setState(() => _isRecurring = val);
+                  setState(() {
+                    _isRecurring = val;
+
+                    // If user just turned ON recurring:
+                    if (val == true) {
+                      // 1. Force deadline to be on
+                      _setDeadline = true;
+                      // 2. If no date is selected yet, force the date picker
+                      if (_selectedDate == null) {
+                        _pickDate();
+                      }
+                    }
+                  });
                 }),
                 if (_isRecurring) ...[
                   const SizedBox(height: 16),
@@ -270,7 +289,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
-  Widget _buildToggleRow(String label, bool value, Function(bool) onChanged) {
+  Widget _buildToggleRow(String label, bool value, Function(bool)? onChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
