@@ -146,6 +146,15 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 _buildToggleRow('Make Recurring', _isRecurring, (val) {
                   setState(() => _isRecurring = val);
                 }),
+                if (_isRecurring) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Frequency',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildFrequencySelector(),
+                ],
                 const SizedBox(height: 30),
               ],
             ),
@@ -272,6 +281,74 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           activeColor: Theme.of(context).colorScheme.primary,
         ),
       ],
+    );
+  }
+
+  Widget _buildFrequencySelector() {
+    // Use a Column for the two rows
+    return Column(
+      children: [
+        // --- Row 1 ---
+        Row(
+          children: [
+            // Use Expanded to make all 3 buttons equal width
+            Expanded(child: _frequencyButton('Daily')),
+            const SizedBox(width: 12), // Gutter space
+            Expanded(child: _frequencyButton('Weekly')),
+            const SizedBox(width: 12), // Gutter space
+            Expanded(child: _frequencyButton('Monthly')),
+          ],
+        ),
+        const SizedBox(height: 12), // Space between the two rows
+        // --- Row 2 ---
+        Row(
+          children: [
+            Expanded(child: _frequencyButton('Quarterly')),
+            const SizedBox(width: 12), // Gutter space
+            Expanded(child: _frequencyButton('Half-Yearly')),
+            const SizedBox(width: 12), // Gutter space
+            Expanded(child: _frequencyButton('Yearly')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _frequencyButton(String label) {
+    final bool isSelected = _frequency == label.toLowerCase();
+    final color = Theme.of(context).colorScheme.primary;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _frequency = label.toLowerCase();
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+
+        // MODIFIED: Only vertical padding. Expanded controls the width.
+        padding: const EdgeInsets.symmetric(vertical: 12),
+
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurface,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+            // ADDED: Prevent text from wrapping or overflowing
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
     );
   }
 }

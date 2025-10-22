@@ -178,7 +178,15 @@ class HomeScreen extends StatelessWidget {
         itemCount: state.tasks.length,
         itemBuilder: (context, index) {
           final task = state.tasks[index];
-          return TaskListItem(task: task);
+
+          // Find the matching category from our state
+          final category = state.categories.firstWhere(
+            (c) => c.id == task.categoryId,
+            // If no category is found (e.g., it was deleted), use a default
+            orElse: () => const Category(id: -1, name: 'Uncategorized'),
+          );
+
+          return TaskListItem(task: task, categoryName: category.name);
         },
       );
     }

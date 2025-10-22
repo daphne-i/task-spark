@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:task_sparkle/database/database.dart'; // Import our Task model
+import 'package:intl/intl.dart';
 
 class TaskListItem extends StatelessWidget {
   final Task task;
+  final String categoryName;
 
-  const TaskListItem({super.key, required this.task});
+  const TaskListItem({
+    super.key,
+    required this.task,
+    required this.categoryName,
+  });
 
   // Helper function to get the priority color
   Color _getPriorityColor(int priority, BuildContext context) {
@@ -19,11 +25,39 @@ class TaskListItem extends StatelessWidget {
     }
   }
 
+  // Helper to get priority as a string
+  String _getPriorityString(int priority) {
+    switch (priority) {
+      case 3:
+        return 'High Priority';
+      case 2:
+        return 'Medium Priority';
+      case 1:
+      default:
+        return 'Low Priority';
+    }
+  }
+
+  // 5. --- ADD THIS HELPER ---
+  // Helper to format the due date
+  String _formatDueDate(DateTime? date) {
+    if (date == null) {
+      return '';
+    }
+    // Using intl to format the date
+    // You can change 'MMM d' (e.g., Oct 23) to 'E, MMM d' (e.g., Thu, Oct 23)
+    return '• ${DateFormat('MMM d').format(date)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final Color priorityColor = _getPriorityColor(task.priority, context);
     final bool isCompleted = task.isCompleted;
+
+    final priorityText = _getPriorityString(task.priority);
+    final dateText = _formatDueDate(task.dueDate);
+    final String subtitle = '$priorityText $dateText • $categoryName';
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -90,7 +124,7 @@ class TaskListItem extends StatelessWidget {
                     ),
                     // TODO: Add formatted date and category
                     Text(
-                      'High Priority • Today, 3 PM • Work', // Dummy subtext
+                      subtitle, // Use our new dynamic subtitle
                       style: textTheme.bodyMedium?.copyWith(
                         color: textTheme.bodyMedium?.color?.withOpacity(0.7),
                       ),
