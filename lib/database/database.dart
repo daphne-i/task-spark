@@ -59,6 +59,10 @@ class AppDatabase extends _$AppDatabase {
   Future<void> deleteTaskById(int taskId) {
     return (delete(tasks)..where((t) => t.id.equals(taskId))).go();
   }
+
+  Future<Task?> getTaskById(int taskId) {
+    return (select(tasks)..where((t) => t.id.equals(taskId))).getSingleOrNull();
+  }
 }
 
 LazyDatabase _openConnection() {

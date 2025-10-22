@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:task_sparkle/database/database.dart'; // Import our Task model
 import 'package:intl/intl.dart';
@@ -8,11 +9,13 @@ import 'package:task_sparkle/bloc/tasks_bloc/tasks_event.dart';
 class TaskListItem extends StatelessWidget {
   final Task task;
   final String categoryName;
+  final ConfettiController confettiController;
 
   const TaskListItem({
     super.key,
     required this.task,
     required this.categoryName,
+    required this.confettiController,
   });
 
   // Helper function to get the priority color
@@ -91,6 +94,9 @@ class TaskListItem extends StatelessWidget {
                 value: isCompleted,
                 onChanged: (bool? newValue) {
                   if (newValue == null) return;
+                  if (newValue == true) {
+                    confettiController.play();
+                  }
                   // Fire the BLoC event
                   context.read<TasksBloc>().add(
                     ToggleTaskCompletion(

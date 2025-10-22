@@ -2,6 +2,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:task_sparkle/bloc/tasks_bloc/tasks_event.dart';
 import 'package:task_sparkle/bloc/tasks_bloc/tasks_state.dart';
 import 'package:task_sparkle/database/database.dart'; // Import our database
+import 'package:jiffy/jiffy.dart';
+import 'package:drift/drift.dart' as drift;
 
 class TasksBloc extends Bloc<TasksEvent, TasksState> {
   final AppDatabase database; // Our database instance
@@ -52,18 +54,72 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     }
   }
 
-  // Handles toggling the completion state of a task
+  DateTime _calculateNextDueDate(DateTime currentDueDate, String frequency) {
+    final jiffy = Jiffy.parseFromDateTime(currentDueDate);
+    switch (frequency) {
+      case 'daily':
+        return jiffy.add(days: 1).dateTime;
+      case 'weekly':
+        return jiffy.add(weeks: 1).dateTime;
+      case 'monthly':
+        return jiffy.add(months: 1).dateTime;
+      case 'quarterly':
+        return jiffy.add(months: 3).dateTime;
+      case 'half-yearly':
+        return jiffy.add(months: 6).dateTime;
+      case 'yearly':
+        return jiffy.add(years: 1).dateTime;
+      default:
+        // Default to weekly if something is wrong
+        return jiffy.add(weeks: 1).dateTime;
+    }
+  }
+
+  // --- REPLACE THE OLD METHOD ---
   void _onToggleTaskCompletion(
     ToggleTaskCompletion event,
     Emitter<TasksState> emit,
   ) async {
     try {
+      // 1. First, update the task as requested
       await database.updateTaskCompletion(event.taskId, event.isCompleted);
-      // Like adding, we don't need to emit. The stream will update.
+
+      // 2. Check if we just completed a recurring task
+      if (event.isCompleted == true) {
+        // Get the full task data
+        final task = await database.getTaskById(
+          event.taskId,
+        ); // <-- We'll add this method
+
+        if (task != null && task.isRecurring && task.dueDate != null) {
+          // 3. Calculate the next due date
+          final nextDueDate = _calculateNextDueDate(
+            task.dueDate!,
+            task.frequency!,
+          );
+
+          // 4. Create a new task (a copy of the old one)
+          final newTask = TasksCompanion(
+            title: drift.Value(task.title),
+            note: drift.Value(task.note),
+            priority: drift.Value(task.priority),
+            categoryId: drift.Value(task.categoryId),
+            isRecurring: drift.Value(true),
+            frequency: drift.Value(task.frequency),
+            dueDate: drift.Value(nextDueDate), // Set the new due date
+            isCompleted: drift.Value(false), // Reset completion
+          );
+
+          // 5. Add the new task to the database
+          await database.addTask(newTask);
+          // The stream will see this new task and update the UI!
+        }
+      }
     } catch (e) {
       emit(TasksError(e.toString()));
     }
   }
+  // --- END OF REPLACEMENT ---
 
   // Handles deleting a task
   void _onDeleteTask(DeleteTask event, Emitter<TasksState> emit) async {

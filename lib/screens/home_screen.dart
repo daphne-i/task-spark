@@ -1,17 +1,40 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // 1. Import BLoC
-import 'package:task_sparkle/bloc/tasks_bloc/tasks_bloc.dart'; // 2. Import BLoC
-import 'package:task_sparkle/bloc/tasks_bloc/tasks_state.dart'; // 3. Import BLoC
-import 'package:task_sparkle/database/database.dart'; // 4. Import Task model
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:task_sparkle/bloc/tasks_bloc/tasks_bloc.dart';
+import 'package:task_sparkle/bloc/tasks_bloc/tasks_state.dart';
+import 'package:task_sparkle/database/database.dart';
+import 'package:task_sparkle/screens/add_task_screen.dart';
 import 'package:task_sparkle/widgets/aurora_background.dart';
 import 'package:task_sparkle/widgets/category_selector.dart';
 import 'package:task_sparkle/widgets/glassmorphic_container.dart';
 import 'package:task_sparkle/widgets/modern_progress_bar.dart';
-import 'package:task_sparkle/widgets/task_list_item.dart'; // 5. Import our new task card
-import 'add_task_screen.dart';
+import 'package:task_sparkle/widgets/task_list_item.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // Controller for the confetti animation
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,88 +42,138 @@ class HomeScreen extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      body: AuroraBackground(
-        child: SafeArea(
-          child: Center(
-            // 6. We wrap our UI in a BlocBuilder
-            // This widget will rebuild whenever the TasksState changes
-            child: BlocBuilder<TasksBloc, TasksState>(
-              builder: (context, state) {
-                // We'll get the real task list and stats from the state
-                List<Task> tasks = [];
-                int pendingTasks = 0;
-                double progress = 0.0;
+      // We wrap the body in a Stack to overlay the confetti
+      body: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          // This is our main UI
+          AuroraBackground(
+            child: SafeArea(
+              child: Center(
+                // This BlocBuilder rebuilds the UI when the task list changes
+                child: BlocBuilder<TasksBloc, TasksState>(
+                  builder: (context, state) {
+                    // --- Dashboard Logic ---
+                    List<Task> allTasks = [];
+                    int pendingTasksToday = 0;
+                    double progressToday = 0.0;
 
-                if (state is TasksLoaded) {
-                  tasks = state.tasks;
-                  final completed = tasks.where((t) => t.isCompleted).length;
-                  pendingTasks = tasks.length - completed;
-                  if (tasks.isNotEmpty) {
-                    progress = completed / tasks.length;
-                  }
-                }
+                    if (state is TasksLoaded) {
+                      allTasks = state.tasks;
 
-                return GlassmorphicContainer(
-                  width: screenSize.width * 0.9,
-                  height: screenSize.height * 0.85,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // --- 1. DASHBOARD HEADER ---
-                        Text(
-                          'Hello!',
-                          style: textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      // Get the current date (ignoring time)
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day);
+
+                      // 1. Get all tasks that are due today
+                      final tasksDueToday = allTasks.where((task) {
+                        if (task.dueDate == null) return false;
+
+                        final taskDate = DateTime(
+                          task.dueDate!.year,
+                          task.dueDate!.month,
+                          task.dueDate!.day,
+                        );
+                        return taskDate.isAtSameMomentAs(today);
+                      }).toList();
+
+                      // 2. From today's tasks, find out how many are pending
+                      pendingTasksToday = tasksDueToday
+                          .where((task) => !task.isCompleted)
+                          .length;
+
+                      // 3. Calculate progress based *only* on today's tasks
+                      if (tasksDueToday.isNotEmpty) {
+                        final completedToday = tasksDueToday
+                            .where((task) => task.isCompleted)
+                            .length;
+                        progressToday = completedToday / tasksDueToday.length;
+                      }
+                    }
+                    // --- End of Dashboard Logic ---
+
+                    return GlassmorphicContainer(
+                      width: screenSize.width * 0.9,
+                      height: screenSize.height * 0.85,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // --- 1. DASHBOARD HEADER ---
+                            Text(
+                              'Hello!',
+                              style: textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // Use the corrected "today" data
+                            Text(
+                              'You have $pendingTasksToday tasks pending today.',
+                              style: textTheme.bodyLarge,
+                            ),
+                            const SizedBox(height: 16),
+                            // Use the corrected "today" progress
+                            ModernProgressBar(progress: progressToday),
+
+                            const SizedBox(height: 24),
+
+                            // --- 2. CATEGORY SELECTOR ---
+                            const CategorySelector(),
+
+                            const SizedBox(height: 24),
+
+                            // --- 3. TASK LIST ---
+                            Text(
+                              'Your Tasks',
+                              style: textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // This Expanded holds the list
+                            Expanded(child: _buildTaskList(context, state)),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        // 7. Use REAL data
-                        Text(
-                          'You have $pendingTasks tasks pending today.',
-                          style: textTheme.bodyLarge,
-                        ),
-                        const SizedBox(height: 16),
-                        // 8. Use REAL data
-                        ModernProgressBar(progress: progress),
-
-                        const SizedBox(height: 24),
-
-                        // --- 2. CATEGORY SELECTOR ---
-                        const CategorySelector(),
-
-                        const SizedBox(height: 24),
-
-                        // --- 3. TASK LIST ---
-                        Text(
-                          'Your Tasks',
-                          style: textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // 9. This is the main UI update
-                        Expanded(child: _buildTaskList(context, state)),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
-        ),
+
+          // --- Confetti Widget ---
+          // This sits on top of the UI and is triggered by the controller
+          ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            colors: const [
+              Colors.green,
+              Colors.blue,
+              Colors.pink,
+              Colors.orange,
+              Colors.purple,
+            ],
+            gravity: 0.1,
+            emissionFrequency: 0.05,
+            numberOfParticles: 10,
+          ),
+        ],
       ),
+
+      // --- Floating Action Button ---
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // This is how we show the "bottom sheet"
+          // Show the Add Task screen as a bottom sheet
           showModalBottomSheet(
             context: context,
-            isScrollControlled: true, // Allows the sheet to be tall
-            backgroundColor: Colors.transparent, // Crucial for our glass effect
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
             builder: (context) {
-              // We wrap our screen in padding to avoid the keyboard
               return Padding(
                 padding: EdgeInsets.only(
                   bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -110,18 +183,14 @@ class HomeScreen extends StatelessWidget {
             },
           );
         },
-        // Apply the glossy gradient
-        elevation: 0, // 1. Remove the default shadow
-        backgroundColor:
-            Colors.transparent, // 2. Make the FAB itself transparent
+        elevation: 0, // Remove default shadow
+        backgroundColor: Colors.transparent, // Make FAB transparent
         child: Container(
-          // 3. Use a Container for our custom button
-          width: 60, // 4. Set a fixed size
+          width: 60,
           height: 60,
           decoration: BoxDecoration(
-            shape: BoxShape.circle, // 5. Make it perfectly round
+            shape: BoxShape.circle,
             gradient: const LinearGradient(
-              // 6. Use the "glossy" blue/purple gradient
               colors: [
                 Color(0xFF4A90E2), // Bright Blue
                 Color(0xFF9013FE), // Purple
@@ -130,7 +199,6 @@ class HomeScreen extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             boxShadow: [
-              // 7. Add our own soft shadow for the "lifted" look
               BoxShadow(
                 color: Colors.black.withOpacity(0.3),
                 spreadRadius: 1,
@@ -139,32 +207,24 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
-            // 8. Put the icon inside our custom container
-            Icons.add,
-            color: Colors.white,
-            size: 30,
-          ),
+          child: const Icon(Icons.add, color: Colors.white, size: 30),
         ),
       ),
     );
   }
 
-  // 10. A new helper widget to build the list based on the state
+  // Helper widget to build the task list based on the BLoC state
   Widget _buildTaskList(BuildContext context, TasksState state) {
     if (state is TasksLoading) {
-      // Show a loading spinner
       return const Center(child: CircularProgressIndicator());
     }
 
     if (state is TasksError) {
-      // Show an error message
       return Center(child: Text('Error loading tasks: ${state.message}'));
     }
 
     if (state is TasksLoaded) {
       if (state.tasks.isEmpty) {
-        // Show a friendly "empty" message
         return Center(
           child: Text(
             'You have no tasks. Add one!',
@@ -182,16 +242,18 @@ class HomeScreen extends StatelessWidget {
           // Find the matching category from our state
           final category = state.categories.firstWhere(
             (c) => c.id == task.categoryId,
-            // If no category is found (e.g., it was deleted), use a default
             orElse: () => const Category(id: -1, name: 'Uncategorized'),
           );
 
-          return TaskListItem(task: task, categoryName: category.name);
+          return TaskListItem(
+            task: task,
+            categoryName: category.name,
+            confettiController: _confettiController, // Pass the controller
+          );
         },
       );
     }
 
-    // Default "should-not-happen" state
     return const Center(child: Text('Something went wrong.'));
   }
 }
