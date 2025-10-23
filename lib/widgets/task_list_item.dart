@@ -67,7 +67,7 @@ class TaskListItem extends StatelessWidget {
     final String subtitle = '$priorityText $dateText • $categoryName';
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      margin: const EdgeInsets.symmetric(vertical: 6.0),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
         borderRadius: BorderRadius.circular(16.0),
@@ -122,7 +122,7 @@ class TaskListItem extends StatelessWidget {
             // --- 3. Task Title & Subtitle ---
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                padding: const EdgeInsets.symmetric(vertical: 10.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,

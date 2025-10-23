@@ -95,10 +95,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     // --- End of Dashboard Logic ---
 
                     return GlassmorphicContainer(
-                      width: screenSize.width * 0.9,
-                      height: screenSize.height * 0.85,
+                      width: screenSize.width * 0.92,
+                      height: screenSize.height * 0.92,
                       child: Padding(
-                        padding: const EdgeInsets.all(20.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0,
+                          vertical: 16.0,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -142,11 +145,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               'You have $pendingTasksToday tasks pending today.',
                               style: textTheme.bodyLarge,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                             // Use the corrected "today" progress
                             ModernProgressBar(progress: progressToday),
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
 
                             // --- 2. CATEGORY SELECTOR ---
                             CategorySelector(
@@ -164,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
 
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 16),
 
                             // --- 3. TASK LIST ---
                             Text(
@@ -173,7 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 10),
 
                             // This Expanded holds the list
                             Expanded(child: _buildTaskList(context, state)),
