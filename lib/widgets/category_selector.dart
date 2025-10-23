@@ -1,32 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:task_sparkle/database/database.dart'; // Import Category model
 
-class CategorySelector extends StatefulWidget {
-  const CategorySelector({super.key});
+class CategorySelector extends StatelessWidget {
+  // 1. New parameters
+  final List<Category> categories;
+  final int? selectedCategoryId; // 'null' will represent "All"
+  final ValueChanged<int?> onCategorySelected;
 
-  @override
-  State<CategorySelector> createState() => _CategorySelectorState();
-}
-
-class _CategorySelectorState extends State<CategorySelector> {
-  // Dummy data for our categories
-  final List<String> categories = [
-    'All',
-    'Home',
-    'Shopping',
-    'Personal',
-    'Work',
-  ];
-  int _selectedIndex = 0;
+  const CategorySelector({
+    super.key,
+    required this.categories,
+    required this.selectedCategoryId,
+    required this.onCategorySelected,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // 2. We add "All" to our list
+    // We can't add to the original list, so we create a new list for the UI
+    final fullListLength = categories.length + 1; // +1 for the "All" button
+
     return Container(
-      height: 40, // Height for the category chips
+      height: 40,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
+        itemCount: fullListLength,
         itemBuilder: (context, index) {
-          final isSelected = _selectedIndex == index;
+          // --- 3. Logic for "All" button vs. Category buttons ---
+          final bool isAllButton = index == 0;
+
+          // 'null' (for "All") or the category's ID
+          final int? categoryId = isAllButton ? null : categories[index - 1].id;
+
+          final String label = isAllButton ? 'All' : categories[index - 1].name;
+          final bool isSelected = categoryId == selectedCategoryId;
+          // --- End of logic ---
 
           // Get theme colors
           final selectedColor = Theme.of(context).colorScheme.onSurface;
@@ -38,10 +46,8 @@ class _CategorySelectorState extends State<CategorySelector> {
 
           return GestureDetector(
             onTap: () {
-              setState(() {
-                _selectedIndex = index;
-              });
-              // In the future, this will trigger the filter
+              // 4. Use the callback to notify the parent (HomeScreen)
+              onCategorySelected(categoryId);
             },
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -49,7 +55,7 @@ class _CategorySelectorState extends State<CategorySelector> {
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               decoration: BoxDecoration(
                 color: isSelected ? selectedColor : unselectedColor,
-                borderRadius: BorderRadius.circular(20), // Pill shape
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected
                       ? selectedColor
@@ -59,7 +65,7 @@ class _CategorySelectorState extends State<CategorySelector> {
               ),
               child: Center(
                 child: Text(
-                  categories[index],
+                  label,
                   style: TextStyle(
                     color: isSelected ? selectedTextColor : unselectedTextColor,
                     fontWeight: isSelected

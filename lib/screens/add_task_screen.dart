@@ -8,7 +8,12 @@ import 'package:task_sparkle/bloc/tasks_bloc/tasks_state.dart';
 import 'package:task_sparkle/database/database.dart'; // We need this for Category
 
 class AddTaskScreen extends StatefulWidget {
-  const AddTaskScreen({super.key});
+  final Task? task; // This will be null for new tasks
+
+  const AddTaskScreen({
+    super.key,
+    this.task, // Make it an optional parameter
+  });
 
   @override
   State<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -27,17 +32,38 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   bool _isRecurring = false;
   String _frequency = 'daily';
 
+  // Helper getter to check if we are in edit mode
+  bool get _isEditMode => widget.task != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // If we're editing a task, pre-fill all the fields
+    if (_isEditMode) {
+      _titleController.text = widget.task!.title;
+      _notesController.text = widget.task!.note ?? '';
+      _selectedPriority = widget.task!.priority;
+      _selectedDate = widget.task!.dueDate;
+      _setDeadline = widget.task!.dueDate != null;
+      _setReminder = false; // TODO: We haven't implemented reminder logic yet
+      _isRecurring = widget.task!.isRecurring;
+      _frequency = widget.task!.frequency ?? 'daily';
+      // The category is set in the build method,
+      // since it needs the BLoC state to get the list of categories.
+    }
+  }
+
   // This is called when the "Save" button is pressed
   void _onSave() {
     if (_titleController.text.isEmpty) {
-      // TODO: Show an error message
+      // TODO: Show an error message (e.g., a SnackBar)
       return;
     }
 
-    // Use the BLoC to add the task
     final tasksBloc = context.read<TasksBloc>();
 
-    // Create the drift 'Companion' object to insert
+    // Create the drift 'Companion' object to insert/update
     final taskCompanion = TasksCompanion(
       title: drift.Value(_titleController.text),
       note: drift.Value(_notesController.text),
@@ -46,21 +72,34 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       dueDate: drift.Value(_setDeadline ? _selectedDate : null),
       isRecurring: drift.Value(_isRecurring),
       frequency: drift.Value(_isRecurring ? _frequency : null),
-      // isCompleted is false by default, so we don't need to set it
+      // Preserve the completion status if editing, default to false if adding
+      isCompleted: drift.Value(widget.task?.isCompleted ?? false),
     );
 
-    // Add the event to the BLoC
-    tasksBloc.add(AddTask(task: taskCompanion));
+    if (_isEditMode) {
+      // --- WE ARE EDITING ---
+      tasksBloc.add(EditTask(taskId: widget.task!.id, task: taskCompanion));
+    } else {
+      // --- WE ARE ADDING ---
+      tasksBloc.add(AddTask(task: taskCompanion));
+    }
 
     // Close the bottom sheet
     Navigator.of(context).pop();
+  }
+
+  // This is called by the "Delete Task" button
+  void _onDelete() {
+    // We know widget.task is not null because we're in edit mode
+    context.read<TasksBloc>().add(DeleteTask(taskId: widget.task!.id));
+    Navigator.of(context).pop(); // Close the edit sheet
   }
 
   // Show the date picker
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
     );
@@ -83,14 +122,34 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     // Get the current list of categories from the BLoC state
     final state = context.read<TasksBloc>().state;
     List<Category> categories = [];
+    // --- NEW CORRECTED CODE ---
     if (state is TasksLoaded) {
       categories = state.categories;
-      // Set a default selected category if we have one
+
+      // We only set the category if it hasn't been set yet
       if (_selectedCategory == null && categories.isNotEmpty) {
-        _selectedCategory = categories.first;
+        if (_isEditMode) {
+          // --- EDIT MODE ---
+          // Try to find the task's category by its ID
+          try {
+            _selectedCategory = categories.firstWhere(
+              (c) => c.id == widget.task!.categoryId,
+            );
+          } catch (e) {
+            // If not found (e.g., category was deleted),
+            // just default to the first category in the list.
+            _selectedCategory = categories.first;
+          }
+        } else {
+          // --- ADD MODE ---
+          // Default to the first category in the list
+          _selectedCategory = categories.first;
+        }
       }
     }
+    // --- END OF NEW CODE ---
 
+    // This is the "Glassmorphism" card
     return ClipRRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -135,10 +194,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 _buildToggleRow(
                   'Set Deadline',
                   _setDeadline,
+                  // Disable this switch if recurring is on
                   _isRecurring
                       ? null
                       : (val) {
-                          // If recurring is on, pass null to disable
                           setState(() {
                             _setDeadline = val;
                             if (_setDeadline && _selectedDate == null) {
@@ -165,6 +224,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     }
                   });
                 }),
+
+                // --- Frequency Selector (if recurring is on) ---
                 if (_isRecurring) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -174,7 +235,33 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   const SizedBox(height: 8),
                   _buildFrequencySelector(),
                 ],
-                const SizedBox(height: 30),
+
+                // --- Delete Button (if edit mode is on) ---
+                if (_isEditMode) ...[
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.error.withOpacity(0.2),
+                        foregroundColor: Theme.of(context).colorScheme.error,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: _onDelete,
+                      child: const Text(
+                        'Delete Task',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 30), // Extra space at bottom
               ],
             ),
           ),
@@ -189,7 +276,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text('New Task', style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          _isEditMode ? 'Edit Task' : 'New Task',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         TextButton(
           onPressed: _onSave, // Hook up the save function
           child: Text(
@@ -221,7 +311,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   Widget _buildCategorySelector(List<Category> categories) {
-    // A glass-style dropdown
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
       decoration: BoxDecoration(
@@ -304,28 +393,24 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   Widget _buildFrequencySelector() {
-    // Use a Column for the two rows
     return Column(
       children: [
-        // --- Row 1 ---
         Row(
           children: [
-            // Use Expanded to make all 3 buttons equal width
             Expanded(child: _frequencyButton('Daily')),
-            const SizedBox(width: 12), // Gutter space
+            const SizedBox(width: 12),
             Expanded(child: _frequencyButton('Weekly')),
-            const SizedBox(width: 12), // Gutter space
+            const SizedBox(width: 12),
             Expanded(child: _frequencyButton('Monthly')),
           ],
         ),
-        const SizedBox(height: 12), // Space between the two rows
-        // --- Row 2 ---
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(child: _frequencyButton('Quarterly')),
-            const SizedBox(width: 12), // Gutter space
+            const SizedBox(width: 12),
             Expanded(child: _frequencyButton('Half-Yearly')),
-            const SizedBox(width: 12), // Gutter space
+            const SizedBox(width: 12),
             Expanded(child: _frequencyButton('Yearly')),
           ],
         ),
@@ -345,10 +430,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-
-        // MODIFIED: Only vertical padding. Expanded controls the width.
         padding: const EdgeInsets.symmetric(vertical: 12),
-
         decoration: BoxDecoration(
           color: isSelected ? color : color.withOpacity(0.3),
           borderRadius: BorderRadius.circular(12),
@@ -362,7 +444,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   : Theme.of(context).colorScheme.onSurface,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             ),
-            // ADDED: Prevent text from wrapping or overflowing
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

@@ -15,6 +15,7 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     on<AddTask>(_onAddTask);
     on<ToggleTaskCompletion>(_onToggleTaskCompletion);
     on<DeleteTask>(_onDeleteTask);
+    on<EditTask>(_onEditTask);
   }
 
   void _onLoadTasks(LoadTasks event, Emitter<TasksState> emit) async {
@@ -126,6 +127,15 @@ class TasksBloc extends Bloc<TasksEvent, TasksState> {
     try {
       await database.deleteTaskById(event.taskId);
       // The stream will update automatically.
+    } catch (e) {
+      emit(TasksError(e.toString()));
+    }
+  }
+
+  void _onEditTask(EditTask event, Emitter<TasksState> emit) async {
+    try {
+      await database.updateTask(event.taskId, event.task);
+      // The stream will see the change and update the UI automatically
     } catch (e) {
       emit(TasksError(e.toString()));
     }

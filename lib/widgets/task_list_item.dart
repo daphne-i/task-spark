@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:task_sparkle/bloc/tasks_bloc/tasks_bloc.dart';
 import 'package:task_sparkle/bloc/tasks_bloc/tasks_event.dart';
+import 'package:task_sparkle/screens/add_task_screen.dart';
 
 class TaskListItem extends StatelessWidget {
   final Task task;
@@ -151,40 +152,29 @@ class TaskListItem extends StatelessWidget {
             ),
 
             // --- 4. Edit/Menu Button (Optional) ---
+            // --- REPLACED WIDGET ---
             IconButton(
-              icon: const Icon(Icons.more_vert),
+              // Change the icon to be more intuitive
+              icon: const Icon(Icons.edit_note_outlined),
               onPressed: () {
-                // Show a confirmation dialog
-                showDialog(
+                // Open the AddTaskScreen, but pass the task to it
+                showModalBottomSheet(
                   context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    title: const Text('Delete Task?'),
-                    content: Text(
-                      'Are you sure you want to delete "${task.title}"?',
-                    ),
-                    actions: [
-                      TextButton(
-                        child: const Text('Cancel'),
-                        onPressed: () => Navigator.of(dialogContext).pop(),
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) {
+                    return Padding(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).viewInsets.bottom,
                       ),
-                      TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.error,
-                        ),
-                        child: const Text('Delete'),
-                        onPressed: () {
-                          // Fire the BLoC event
-                          context.read<TasksBloc>().add(
-                            DeleteTask(taskId: task.id),
-                          );
-                          Navigator.of(dialogContext).pop();
-                        },
-                      ),
-                    ],
-                  ),
+                      // Pass the task to enter "Edit Mode"
+                      child: AddTaskScreen(task: task),
+                    );
+                  },
                 );
               },
             ),
+            // --- END OF REPLACEMENT ---
           ],
         ),
       ),

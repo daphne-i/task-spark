@@ -10,6 +10,7 @@ import 'package:task_sparkle/widgets/category_selector.dart';
 import 'package:task_sparkle/widgets/glassmorphic_container.dart';
 import 'package:task_sparkle/widgets/modern_progress_bar.dart';
 import 'package:task_sparkle/widgets/task_list_item.dart';
+import 'package:task_sparkle/theme/theme_cubit.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // Controller for the confetti animation
   late ConfettiController _confettiController;
+  int? _selectedCategoryId;
 
   @override
   void initState() {
@@ -100,13 +102,40 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // --- 1. DASHBOARD HEADER ---
-                            Text(
-                              'Hello!',
-                              style: textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                            // --- NEW CODE ---
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 1. The "Hello!" text
+                                Text(
+                                  'Hello!',
+                                  style: textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                // 2. The new Theme Toggle Button
+                                IconButton(
+                                  icon: Icon(
+                                    // Use context.watch to get the current state
+                                    context.watch<ThemeCubit>().state ==
+                                            ThemeMode.light
+                                        ? Icons.dark_mode_outlined
+                                        : Icons.light_mode_outlined,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                    size: 28,
+                                  ),
+                                  onPressed: () {
+                                    // Call the cubit's function to toggle the theme
+                                    context.read<ThemeCubit>().toggleTheme();
+                                  },
+                                ),
+                              ],
                             ),
+                            // --- END OF NEW CODE ---
                             const SizedBox(height: 4),
                             // Use the corrected "today" data
                             Text(
@@ -120,7 +149,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 24),
 
                             // --- 2. CATEGORY SELECTOR ---
-                            const CategorySelector(),
+                            CategorySelector(
+                              // Pass the real categories from our BLoC state
+                              categories: (state is TasksLoaded)
+                                  ? state.categories
+                                  : [],
+                              // Pass the currently selected ID
+                              selectedCategoryId: _selectedCategoryId,
+                              // Update our state when a category is tapped
+                              onCategorySelected: (categoryId) {
+                                setState(() {
+                                  _selectedCategoryId = categoryId;
+                                });
+                              },
+                            ),
 
                             const SizedBox(height: 24),
 
@@ -214,6 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // Helper widget to build the task list based on the BLoC state
+  // --- NEW FILTERING METHOD ---
   Widget _buildTaskList(BuildContext context, TasksState state) {
     if (state is TasksLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -224,20 +267,44 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (state is TasksLoaded) {
-      if (state.tasks.isEmpty) {
-        return Center(
-          child: Text(
-            'You have no tasks. Add one!',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        );
+      // --- THIS IS THE NEW LOGIC ---
+      // 1. Get all tasks from the state
+      final allTasks = state.tasks;
+
+      // 2. Filter the list based on our state variable
+      final filteredTasks = allTasks.where((task) {
+        if (_selectedCategoryId == null) {
+          return true; // "All" is selected, so show all tasks
+        }
+        return task.categoryId == _selectedCategoryId;
+      }).toList();
+      // --- END OF NEW LOGIC ---
+
+      // 3. Check if the *filtered* list is empty
+      if (filteredTasks.isEmpty) {
+        // Show a helpful message
+        if (_selectedCategoryId == null && allTasks.isEmpty) {
+          return Center(
+            child: Text(
+              'You have no tasks. Add one!',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        } else {
+          return Center(
+            child: Text(
+              'No tasks in this category.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          );
+        }
       }
 
-      // We have tasks, so build the list!
+      // 4. Build the list using the *filtered* list
       return ListView.builder(
-        itemCount: state.tasks.length,
+        itemCount: filteredTasks.length,
         itemBuilder: (context, index) {
-          final task = state.tasks[index];
+          final task = filteredTasks[index]; // Use the filtered list
 
           // Find the matching category from our state
           final category = state.categories.firstWhere(
@@ -256,4 +323,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return const Center(child: Text('Something went wrong.'));
   }
+
+  // --- END OF NEW METHOD ---
 }

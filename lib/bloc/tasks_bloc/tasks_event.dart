@@ -44,3 +44,13 @@ class DeleteTask extends TasksEvent {
   @override
   List<Object> get props => [taskId];
 }
+
+class EditTask extends TasksEvent {
+  final int taskId;
+  final TasksCompanion task; // The new data
+
+  const EditTask({required this.taskId, required this.task});
+
+  @override
+  List<Object> get props => [taskId, task];
+}
