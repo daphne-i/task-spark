@@ -11,6 +11,7 @@ import 'package:task_sparkle/widgets/aurora_background.dart';
 import 'package:task_sparkle/widgets/glassmorphic_container.dart';
 import 'package:task_sparkle/widgets/modern_progress_bar.dart';
 import 'package:task_sparkle/widgets/task_list_item.dart';
+import 'package:task_sparkle/screens/scratch_pad_screen.dart'; // <-- Import Scratch Pad
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -414,7 +415,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       },
                     ),
-
+                    IconButton(
+                      icon: Icon(
+                        Icons
+                            .description_outlined, // Or Icons.notes_rounded, Icons.description_outlined
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.7),
+                        size: 22,
+                      ),
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true, // Important for keyboard
+                          backgroundColor:
+                              Colors.transparent, // Let the sheet handle color
+                          // Use a slightly different elevation/barrier color if desired
+                          barrierColor: Colors.black.withOpacity(0.6),
+                          builder: (context) {
+                            // Add padding to push the sheet up when keyboard appears
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                bottom: MediaQuery.of(
+                                  context,
+                                ).viewInsets.bottom,
+                              ),
+                              child: const ScratchPadScreen(),
+                            );
+                          },
+                        );
+                      },
+                    ),
                     // --- EXISTING FILTER BUTTON ---
                     PopupMenuButton<int?>(
                       onSelected: (int? categoryId) {
