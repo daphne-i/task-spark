@@ -54,3 +54,5 @@ class EditTask extends TasksEvent {
   @override
   List<Object> get props => [taskId, task];
 }
+
+class ClearCompletedTasks extends TasksEvent {}
