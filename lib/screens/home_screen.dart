@@ -234,8 +234,8 @@ class _HomeScreenState extends State<HomeScreen> {
             shape: BoxShape.circle,
             gradient: const LinearGradient(
               colors: [
-                Color(0xFF4A90E2), // Bright Blue
-                Color(0xFF9013FE), // Purple
+                Color(0xFF64B5F6), // Bright Blue
+                Color(0xFF9575CD), // Purple
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,

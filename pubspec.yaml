@@ -49,7 +49,8 @@ dependencies:
   animated_gradient_background:
   intl: ^0.18.1
   jiffy: ^6.2.1
-  confetti: ^0.7.0 #
+  confetti: ^0.7.0 
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

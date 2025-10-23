@@ -16,20 +16,19 @@ class AuroraBackground extends StatelessWidget {
 
     final colors = isDarkMode
         ? const [
-            // "Midnight" Colors
-            Color(0xFF0D47A1),
-            Color(0xFF4A148C),
-            Color(0xFFAD1457),
-            Color(0xFF004D40),
+            // "Deep Midnight" Colors
+            Color(0xFF0D1B2A), // Very Dark Blue (Onyx)
+            Color(0xFF1B263B), // Dark Steel Blue
+            Color(0xFF003C43), // Very Dark Teal
+            Color(0xFF2F2F2F), // Dark Grey
           ]
         : const [
-            // "Gleam" Colors
-            Color(0xFF4FC3F7),
-            Color(0xFFF06292),
-            Color(0xFFFFD54F),
-            Color(0xFF81C784),
+            // "Subtle Gleam" Colors (Unchanged)
+            Color(0xFFA1C4FD),
+            Color(0xFFFBC2EB),
+            Color(0xFFFFF9C4),
+            Color(0xFFB2DFDB),
           ];
-
     // 3. Return the widget from the package
     return AnimatedGradientBackground(
       colors: colors,

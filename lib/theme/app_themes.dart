@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AppThemes {
-  // --- "GLEAM" (Light Theme) ---
+  // --- "Subtle Gleam" (Light Theme) ---
   static final ThemeData lightTheme = ThemeData(
     brightness: Brightness.light,
-    scaffoldBackgroundColor: Colors.transparent, // Crucial for our design
-    primaryColor: const Color(0xFF6A1B9A), // A placeholder purple
-    fontFamily: 'Manrope', // We'll need to add this font later
-    // Define text styles
+    scaffoldBackgroundColor: Colors.transparent,
+    primaryColor: const Color(0xFF64B5F6), // Soft Sky Blue
+    fontFamily: 'Manrope',
+
     textTheme: const TextTheme(
       displayLarge: TextStyle(
         fontSize: 48.0,
@@ -31,25 +31,25 @@ class AppThemes {
       ),
     ),
 
-    // Define accent colors for priorities
+    // NEW SOFTER COLORS
     colorScheme: const ColorScheme.light(
-      primary: Color(0xFF0D47A1), // Low Priority (Blue)
-      secondary: Color(0xFFF9A825), // Medium Priority (Yellow)
-      error: Color(0xFFB71C1C), // High Priority (Red)
-      surface: Colors.white, // The "glass" tint
-      onSurface: Colors.black87, // Main text color on "glass"
-      background: Colors.white, // Not used, but good to define
+      primary: Color(0xFF64B5F6), // Soft Sky Blue
+      secondary: Color(0xFFFFD54F), // Pale Gold
+      error: Color(0xFFE57373), // Soft Salmon Red
+      surface: Colors.white,
+      onSurface: Colors.black87,
+      background: Colors.white,
       onBackground: Colors.black87,
     ),
   );
 
-  // --- "MIDNIGHT" (Dark Theme) ---
+  // --- "Deep Midnight" (Dark Theme) ---
   static final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: Colors.transparent, // Crucial for our design
-    primaryColor: const Color(0xFFE91E63), // A placeholder pink
-    fontFamily: 'Manrope', // We'll add this font later
-    // Define text styles
+    scaffoldBackgroundColor: Colors.transparent,
+    primaryColor: const Color(0xFF546E7A), // Deeper Blue-Grey
+    fontFamily: 'Manrope',
+
     textTheme: const TextTheme(
       displayLarge: TextStyle(
         fontSize: 48.0,
@@ -73,14 +73,14 @@ class AppThemes {
       ),
     ),
 
-    // Define accent colors for priorities
+    // NEW DEEP & DARK ACCENTS
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF42A5F5), // Low Priority (Electric Blue)
-      secondary: Color(0xFFFFA726), // Medium Priority (Vibrant Orange)
-      error: Color(0xFFEC407A), // High Priority (Hot Pink)
-      surface: Colors.black, // The "glass" tint
-      onSurface: Colors.white, // Main text color on "glass"
-      background: Colors.black, // Not used
+      primary: Color(0xFF546E7A), // Deep Blue-Grey
+      secondary: Color(0xFFA1887F), // Muted Taupe (Bronze)
+      error: Color(0xFFA94446), // Deep Wine Red
+      surface: Colors.black,
+      onSurface: Colors.white,
+      background: Colors.black,
       onBackground: Colors.white,
     ),
   );
