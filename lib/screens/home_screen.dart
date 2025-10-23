@@ -193,7 +193,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 28.0, bottom: 12.0),
                       child: Text(
-                        'For my Husband ❤️',
+                        'Husband ❤️',
                         style: TextStyle(
                           color: Theme.of(
                             context,
