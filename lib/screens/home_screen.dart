@@ -22,7 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late ConfettiController _confettiController;
-  int? _selectedCategoryId;
+  int? _selectedCategoryId = -1;
 
   @override
   void initState() {
@@ -44,157 +44,109 @@ class _HomeScreenState extends State<HomeScreen> {
     final textTheme = Theme.of(context).textTheme;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // --- 1. GET THE BLOC STATE FIRST ---
+    // We use context.watch to get the current state and rebuild when it changes
+    final tasksState = context.watch<TasksBloc>().state;
+
+    // --- 2. PREPARE DATA (Handle loading/error early) ---
+    List<Task> allTasks = [];
+    List<Category> categories = [];
+    int pendingTasksToday = 0;
+    double totalProgress = 0.0;
+    int totalTasks = 0;
+    bool allTasksAreEmpty = true; // Assume empty initially
+
+    Widget bodyContent; // To hold the main UI or loading/error
+
+    if (tasksState is TasksLoading) {
+      bodyContent = const Center(child: CircularProgressIndicator());
+    } else if (tasksState is TasksError) {
+      bodyContent = Center(child: Text('Error: ${tasksState.message}'));
+    } else if (tasksState is TasksLoaded) {
+      // --- If loaded, calculate everything ---
+      allTasks = tasksState.tasks;
+      categories = tasksState.categories;
+      allTasksAreEmpty = allTasks.isEmpty;
+
+      // Dashboard Logic
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tasksDueToday = allTasks.where((task) {
+        if (task.dueDate == null) return false;
+        final taskDate = DateTime(
+          task.dueDate!.year,
+          task.dueDate!.month,
+          task.dueDate!.day,
+        );
+        return taskDate.isAtSameMomentAs(today);
+      }).toList();
+      pendingTasksToday = tasksDueToday
+          .where((task) => !task.isCompleted)
+          .length;
+      final double progressToday =
+          tasksDueToday
+              .isEmpty // Use progressToday for display text, totalProgress for bar
+          ? 0.0
+          : tasksDueToday.where((task) => task.isCompleted).length /
+                tasksDueToday.length;
+
+      // Total tasks logic
+      totalTasks = allTasks.length;
+      final int totalCompletedTasks = allTasks
+          .where((task) => task.isCompleted)
+          .length;
+      totalProgress = (totalTasks == 0)
+          ? 0.0
+          : totalCompletedTasks / totalTasks;
+
+      // --- THE FILTER LOGIC (using the state variable _selectedCategoryId) ---
+      final filteredTasks = allTasks.where((task) {
+        print(
+          'Filtering task ID ${task.id}. Selected Category ID: $_selectedCategoryId',
+        );
+        if (_selectedCategoryId == -1) {
+          return true; // "All" selected
+        }
+        return task.categoryId == _selectedCategoryId;
+      }).toList();
+
+      // --- Assign the loaded UI to bodyContent ---
+      bodyContent = _buildLoadedUI(
+        context,
+        screenSize,
+        textTheme,
+        pendingTasksToday,
+        totalTasks,
+        totalProgress,
+        categories,
+        filteredTasks, // Pass the correctly filtered list
+        allTasksAreEmpty,
+      );
+    } else {
+      // Fallback
+      bodyContent = const Center(child: Text('Something went wrong.'));
+    }
+
+    // --- 3. BUILD THE SCAFFOLD ---
+    // The Scaffold structure remains mostly the same
     return Scaffold(
       body: Stack(
         alignment: Alignment.topCenter,
         children: [
           AuroraBackground(
             child: SafeArea(
-              //
-              // --- THIS IS THE NEWLY ADDED CODE ---
-              //
-              // We wrap the old 'Center' widget in a 'Stack'
-              // to layer the text over the top.
               child: Stack(
                 children: [
-                  // This Center widget holds all your existing app UI
-                  Center(
-                    child: BlocBuilder<TasksBloc, TasksState>(
-                      builder: (context, state) {
-                        // --- 1. HANDLE LOADING/ERROR STATES FIRST ---
-                        if (state is TasksLoading) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                        if (state is TasksError) {
-                          return Center(child: Text('Error: ${state.message}'));
-                        }
+                  // --- Body Content (could be loading, error, or loaded UI) ---
+                  Center(child: bodyContent),
 
-                        // --- 2. IF WE ARE LOADED, PREPARE ALL DATA ---
-                        if (state is TasksLoaded) {
-                          final allTasks = state.tasks;
-                          final categories = state.categories;
-                          // --- CORRECTED SORTING BLOCK ---
-                          final sortedTasks = List<Task>.from(
-                            allTasks,
-                          ); // Create a modifiable copy
-                          sortedTasks.sort((a, b) {
-                            // Rule 1: Completed tasks go to the bottom
-                            if (a.isCompleted && !b.isCompleted)
-                              return 1; // a goes after b
-                            if (!a.isCompleted && b.isCompleted)
-                              return -1; // a goes before b
-
-                            // If both are completed or both are open, proceed.
-                            // We only actively sort the *open* tasks among themselves.
-                            if (!a.isCompleted) {
-                              // Only sort if both are open
-                              bool aHasDate = a.dueDate != null;
-                              bool bHasDate = b.dueDate != null;
-
-                              // Rule 2 vs 3: Tasks with dates come before tasks without
-                              if (aHasDate && !bHasDate)
-                                return -1; // a (with date) comes first
-                              if (!aHasDate && bHasDate)
-                                return 1; // b (with date) comes first
-
-                              // Rule 2: Both have due dates
-                              if (aHasDate && bHasDate) {
-                                // Sort by due date (nearest first - ASCENDING)
-                                int dateCompare = a.dueDate!.compareTo(
-                                  b.dueDate!,
-                                );
-                                if (dateCompare != 0) return dateCompare;
-
-                                // Same date, sort by priority (highest first - DESCENDING)
-                                // Higher priority value (3) should come before lower (1)
-                                return b.priority.compareTo(a.priority);
-                              }
-
-                              // Rule 3: Both are open, neither has a due date
-                              if (!aHasDate && !bHasDate) {
-                                // Sort by priority (highest first - DESCENDING)
-                                return b.priority.compareTo(a.priority);
-                              }
-                            }
-
-                            // For completed tasks, or if priorities/dates are equal,
-                            // maintain their relative order (or sort by ID for stability)
-                            return a.id.compareTo(b.id);
-                          });
-                          // --- END OF CORRECTED SORTING BLOCK ---
-                          // --- 3. DO ALL LOGIC HERE ---
-                          // Dashboard Logic
-                          final now = DateTime.now();
-                          final today = DateTime(now.year, now.month, now.day);
-                          final tasksDueToday = allTasks.where((task) {
-                            if (task.dueDate == null) return false;
-                            final taskDate = DateTime(
-                              task.dueDate!.year,
-                              task.dueDate!.month,
-                              task.dueDate!.day,
-                            );
-                            return taskDate.isAtSameMomentAs(today);
-                          }).toList();
-                          final pendingTasksToday = tasksDueToday
-                              .where((task) => !task.isCompleted)
-                              .length;
-                          final double progressToday = tasksDueToday.isEmpty
-                              ? 0.0
-                              : tasksDueToday
-                                        .where((task) => task.isCompleted)
-                                        .length /
-                                    tasksDueToday.length;
-
-                          // Total tasks logic
-                          final int totalTasks = allTasks.length;
-                          final int totalCompletedTasks = allTasks
-                              .where((task) => task.isCompleted)
-                              .length;
-                          final double totalProgress = (totalTasks == 0)
-                              ? 0.0
-                              : totalCompletedTasks / totalTasks;
-
-                          // --- 4. THE CORRECT FILTER LOGIC ---
-                          final filteredTasks = sortedTasks.where((task) {
-                            if (_selectedCategoryId == null) {
-                              return true; // "All" is selected
-                            }
-                            return task.categoryId == _selectedCategoryId;
-                          }).toList();
-
-                          // --- 5. RETURN THE UI ---
-                          return _buildLoadedUI(
-                            context,
-                            screenSize,
-                            textTheme,
-                            pendingTasksToday,
-                            totalTasks, // Pass total tasks
-                            totalProgress, // Pass total progress
-                            categories,
-                            filteredTasks, // Pass the filtered list
-                            allTasks
-                                .isEmpty, // Pass a flag for the "empty" message
-                          );
-                        }
-
-                        // Default fallback
-                        return const Center(
-                          child: Text('Something went wrong.'),
-                        );
-                      },
-                    ),
-                  ),
-
-                  // --- THIS IS THE PERSONAL MESSAGE WIDGET ---
-                  // It's aligned to the bottom center of the Stack
+                  // --- Personal Message ---
                   Align(
                     alignment: Alignment.bottomLeft,
                     child: Padding(
                       padding: const EdgeInsets.only(left: 28.0, bottom: 12.0),
                       child: Text(
-                        'Husband ❤️',
+                        'For my Husband ❤️',
                         style: TextStyle(
                           color: Theme.of(
                             context,
@@ -202,18 +154,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           shadows: [
-                            // Darker shadow for the 'pressed-in' effect
                             Shadow(
-                              color: Theme.of(context).colorScheme.onSurface
-                                  .withOpacity(0.2), // Subtle dark
-                              blurRadius: 5,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.2),
+                              blurRadius: 2,
                               offset: const Offset(1, 1),
                             ),
-                            // Lighter highlight for the 'raised' edge
                             Shadow(
-                              color: Theme.of(context).colorScheme.surface
-                                  .withOpacity(0.5), // Subtle light
-                              blurRadius: 5,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surface.withOpacity(0.5),
+                              blurRadius: 2,
                               offset: const Offset(-1, -1),
                             ),
                           ],
@@ -221,13 +173,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  // --- END OF NEWLY ADDED CODE ---
                 ],
               ),
             ),
           ),
 
-          // --- Confetti Widget ---
+          // --- Confetti ---
           ConfettiWidget(
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
@@ -245,9 +196,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
-      // --- Floating Action Button ---
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: // ... (Your existing FAB code remains the same) ...
+      FloatingActionButton(
         onPressed: () {
           showModalBottomSheet(
             context: context,
@@ -298,6 +248,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // --- _buildLoadedUI method remains the same ---
+  // --- _buildTaskList method remains the same ---
+  // --- _buildDebugInfo method remains the same (you can remove it later) ---
+
+  // ... (Keep your _buildLoadedUI, _buildTaskList, and _buildDebugInfo methods exactly as they were) ...
   // --- This is a "dumb" widget that just builds the UI ---
   Widget _buildLoadedUI(
     BuildContext context,
@@ -321,6 +276,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildDebugInfo(filteredTasks, allTasksAreEmpty),
+            const SizedBox(height: 8),
             // --- 1. DASHBOARD HEADER ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -449,6 +406,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // --- EXISTING FILTER BUTTON ---
                     PopupMenuButton<int?>(
                       onSelected: (int? categoryId) {
+                        print('Filter selected: $categoryId');
                         setState(() {
                           _selectedCategoryId = categoryId;
                         });
@@ -461,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         List<PopupMenuEntry<int?>> items = [];
                         items.add(
                           const PopupMenuItem<int?>(
-                            value: null,
+                            value: -1,
                             child: Text('All'),
                           ),
                         );
@@ -498,30 +456,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- This just builds the list it's given ---
+  // --- THIS IS THE CORRECTED METHOD ---
   Widget _buildTaskList(
     BuildContext context,
     List<Task> filteredTasks,
     List<Category> allCategories,
-    bool allTasksAreEmpty,
+    bool allTasksAreEmpty, // This flag tells us if ANY tasks exist in the app
   ) {
+    // 1. Check if the FILTERED list is empty FIRST
     if (filteredTasks.isEmpty) {
-      if (_selectedCategoryId == null && allTasksAreEmpty) {
-        return Center(
-          child: Text(
-            'You have no tasks. Add one!',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        );
+      // 2. If it's empty, decide WHICH empty message to show
+      if (_selectedCategoryId == -1 && allTasksAreEmpty) {
+        // Check for -1
+        return Center(/* ... "You have no tasks..." ... */);
       } else {
+        // If tasks EXIST, but just not in this specific filter
         return Center(
           child: Text(
-            'No tasks in this category.',
+            // This message now correctly shows for empty categories,
+            // BUT NOT when 'All' is selected and tasks exist.
+            'No tasks match this filter.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         );
       }
     }
 
+    // 3. If the filtered list is NOT empty, build the ListView
     return ListView.builder(
       itemCount: filteredTasks.length,
       itemBuilder: (context, index) {
@@ -540,4 +501,30 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
-}
+
+  // --- END OF CORRECTED METHOD ---
+  // --- ADD THIS DEBUG WIDGET ---
+  Widget _buildDebugInfo(List<Task> filteredTasks, bool allTasksAreEmpty) {
+    // Get the current total task count from the BLoC state
+    int totalTaskCount = 0;
+    final state = context.read<TasksBloc>().state;
+    if (state is TasksLoaded) {
+      totalTaskCount = state.tasks.length;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      color: Colors.black.withOpacity(0.5), // Semi-transparent background
+      child: Text(
+        'DEBUG:\n'
+        'Selected Category ID: $_selectedCategoryId\n'
+        'Total Tasks (from BLoC): $totalTaskCount\n'
+        'Filtered Tasks Count: ${filteredTasks.length}\n'
+        'All Tasks Empty Flag: $allTasksAreEmpty',
+        style: const TextStyle(color: Colors.white, fontSize: 10),
+      ),
+    );
+  }
+
+  // --- END OF ADDED WIDGET ---
+} // End of _HomeScreenState class
