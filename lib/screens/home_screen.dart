@@ -146,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 28.0, bottom: 12.0),
                       child: Text(
-                        'For my Husband ❤️',
+                        'Husband ❤️',
                         style: TextStyle(
                           color: Theme.of(
                             context,
@@ -276,8 +276,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildDebugInfo(filteredTasks, allTasksAreEmpty),
-            const SizedBox(height: 8),
             // --- 1. DASHBOARD HEADER ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -503,28 +501,4 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --- END OF CORRECTED METHOD ---
-  // --- ADD THIS DEBUG WIDGET ---
-  Widget _buildDebugInfo(List<Task> filteredTasks, bool allTasksAreEmpty) {
-    // Get the current total task count from the BLoC state
-    int totalTaskCount = 0;
-    final state = context.read<TasksBloc>().state;
-    if (state is TasksLoaded) {
-      totalTaskCount = state.tasks.length;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      color: Colors.black.withOpacity(0.5), // Semi-transparent background
-      child: Text(
-        'DEBUG:\n'
-        'Selected Category ID: $_selectedCategoryId\n'
-        'Total Tasks (from BLoC): $totalTaskCount\n'
-        'Filtered Tasks Count: ${filteredTasks.length}\n'
-        'All Tasks Empty Flag: $allTasksAreEmpty',
-        style: const TextStyle(color: Colors.white, fontSize: 10),
-      ),
-    );
-  }
-
-  // --- END OF ADDED WIDGET ---
 } // End of _HomeScreenState class
